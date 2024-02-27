@@ -43,5 +43,57 @@ ${content.html5()}
 $for(include-after)$
 $include-after$
 $endfor$
+
+<script type="text/javascript">(function() {
+QUICK_PAGES = "$md_pages$".split(" ");
+
+// loads and renders content partials (prerendered html for just the page content)
+function loadPartial(path) {
+  if (path[path.length-1] === '/') path = '/index'; // root partial is at index.partial.html
+  fetch(path + '.partial.html')
+  .then(function(response) { return response.text(); })
+  .then(function(text) {
+    var content = document.getElementById('content');
+    content.innerHTML = text;
+    makeQuickLinks(content)
+    // after the new content has been painted, scroll to the top
+    requestAnimationFrame(function() { window.scrollTo(0,0); })
+  })
+  .catch(function(error) {
+    console.error('Error fetching partial content', error);
+  });
+}
+
+// handles click events for pages that have prerendered content partials.
+function quicklinkHandler(evt) {
+  var href = evt.target.getAttribute('href');
+  evt.preventDefault(); // Prevent browser navigation, which reloads the page
+  // Update browser address bar and history
+  history.pushState({ path: href }, '', href);
+  // Fetch and display content without reloading the page
+  loadPartial(href);
+}
+
+// Listen for popstate event to handle back/forward navigation
+window.addEventListener('popstate', function(event) {
+  if (event.state && event.state.path) {
+    loadPartial(event.state.path);
+  }
+});
+
+function makeQuickLinks(root) {
+  var links = root.getElementsByTagName("a");
+  for (var i = 0; i < links.length; i++) {
+    var href = links[i].getAttribute('href');
+    var dest = QUICK_PAGES.find(function(path) { return path === href; });
+    if (dest) {
+      links[i].addEventListener('click', quicklinkHandler);
+    }
+  }
+}
+
+makeQuickLinks(document.body);
+history.replaceState({ path: window.location.pathname }, '');
+})();</script>
 </body>
 </html>
